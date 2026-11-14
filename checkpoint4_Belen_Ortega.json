@@ -1,0 +1,949 @@
+{
+  "name": "TP 4 - Integraciones Avanzadas e Interconexión de Sistemas",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {},
+        "options": {}
+      },
+      "id": "3b5e59f5-9472-4388-b8fe-42bda8d89ed0",
+      "name": "Gmail Trigger (Soporte)",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -368,
+        96
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "S9E3tfVWg5gx8rpn",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "anti-autoreply-1",
+              "leftValue": "={{ $json.subject || $json.text }}",
+              "rightValue": "auto-reply|out of office|undeliverable|no-reply",
+              "operator": {
+                "type": "string",
+                "operation": "notRegex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1413983c-0dcf-4a42-8d4d-691f3c5dde9b",
+      "name": "IF - Anti Auto-Reply ①",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -208,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appDvoHgRD0znGrZN",
+          "mode": "list",
+          "cachedResultName": "Memoria persistente y resumen automático del agente",
+          "cachedResultUrl": "https://airtable.com/appDvoHgRD0znGrZN"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbloMOCKWuWTY4nQG",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/appDvoHgRD0znGrZN/tbloMOCKWuWTY4nQG"
+        },
+        "filterByFormula": "={Session_ID} = '{{ $json.from.value[0].address }}'",
+        "options": {}
+      },
+      "id": "5aa57580-3a51-4522-ba96-ac3186905a09",
+      "name": "Search records (Look up) ②",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -48,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "3ffsdOakyDxZgYIr",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "efe13e91-b57a-4190-90c7-1fa74831745b",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f514f774-28f1-4db4-893f-fc1fb9176886",
+      "name": "If",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        128,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Remitente: {{ $('Gmail Trigger (Soporte)').item.json.from.value[0].address }}\nAsunto: {{ $('Gmail Trigger (Soporte)').item.json.subject || '(sin asunto)' }}\nMensaje:\n{{ $('Gmail Trigger (Soporte)').item.json.text || 'Consulta de prueba inicial' }}",
+        "options": {
+          "systemMessage": "=[ROL]\nEres el Manager Orquestador Principal (Asistente Corporativo de Calificación e Ingreso de Leads).\n\n[ÁMBITO]\nTu dominio operativo comprende la recepción de consultas comerciales, la clasificación de intenciones de clientes y la delegación de tareas hacia flujos subordinados.\n\n[INICIO DE CONTEXTO COMPARTIDO]\nEl estado del caso actual es: {{ ($('Create a record').isExecuted ? $('Create a record').item.json.fields?.['Estado del caso'] : $('If').item.json.fields?.['Estado del caso']) || 'Nuevo' }}\nEl resumen consolidado es: {{ ($('Create a record').isExecuted ? $('Create a record').item.json.fields?.['Resumen consolidado'] : $('If').item.json.fields?.['Resumen consolidado']) || 'Sin historial previo' }}\n[FIN DE CONTEXTO COMPARTIDO]\n\n[INSTRUCCIONES DE ACCIÓN]\n- Trabajas de forma autónoma: nunca pidas confirmación ni hagas preguntas al operador.\n- Para cada email recibido, usa SIEMPRE la herramienta de Gmail para crear un borrador de respuesta profesional dirigido al remitente (usa exactamente la dirección indicada en \"Remitente\"), con un asunto que empiece por \"Re: \" seguido del asunto original.\n- Después de crear el borrador, responde con un breve resumen de lo que hiciste.\n- Termina tu respuesta con una única línea de clasificación: \"Categoría: consulta_crm\" si la consulta pide datos, extracción o información del CRM; en cualquier otro caso \"Categoría: redactar_correo\".",
+          "maxIterations": 5
+        }
+      },
+      "id": "d2b59968-598b-4772-8939-2f47e67f3d4a",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        320,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "72c4e8d2-06b0-40ea-92ce-aa0a4da92343",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        384,
+        208
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ $fromAI('Subject', 'Asunto profesional para la respuesta al cliente', 'string') }}",
+        "message": "={{ $fromAI('Message', 'El cuerpo del mensaje profesional redactado para el cliente', 'string') }}",
+        "options": {
+          "sendTo": "={{ $fromAI('To', 'Correo electrónico del destinatario', 'string') }}"
+        }
+      },
+      "id": "0b3823de-f8cf-4a56-9eac-b172c3c8daad",
+      "name": "Gmail - Create Draft (HITL) ③",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.2,
+      "position": [
+        544,
+        208
+      ],
+      "webhookId": "df17fb8b-2203-45f7-a6c3-784b0ec64ec1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "S9E3tfVWg5gx8rpn",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "clean-payload-1",
+              "name": "From",
+              "value": "={{ $('Gmail Trigger (Soporte)').item.json.from?.value?.[0]?.address || 'Desconocido' }}",
+              "type": "string"
+            },
+            {
+              "id": "clean-payload-2",
+              "name": "Subject",
+              "value": "={{ $('Gmail Trigger (Soporte)').item.json.subject || 'Consulta' }}",
+              "type": "string"
+            },
+            {
+              "id": "clean-payload-3",
+              "name": "BodyText",
+              "value": "={{ $('AI Agent').item.json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "aa6e2e1d-2212-4926-87f6-7669dac984f3",
+      "name": "Set - Clean Payload ④",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        592,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.BodyText }}",
+                    "rightValue": "/crm|extraer|consulta_crm/i",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    },
+                    "id": "5be1cc5d-846e-4d41-ae90-e27873c2fac6"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "e8d09e63-9e35-4913-a7e9-1d5ab0155fac",
+                    "leftValue": "={{ $json.BodyText }}",
+                    "rightValue": "/correo|email|mensaje|bienvenida|redactar/i",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "8e871af9-a932-446f-93df-3859a5602118",
+      "name": "Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        784,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "zRA72z8whJ2ZuEO4",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/zRA72z8whJ2ZuEO4",
+          "cachedResultName": "Worker_CRM_Extraccion"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "CRM": "={{ $json.From }}"
+          },
+          "matchingColumns": [
+            "CRM"
+          ],
+          "schema": [
+            {
+              "id": "CRM",
+              "displayName": "CRM",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "1f7241af-5b08-4976-8e38-8af2843e89fb",
+      "name": "Call 'Worker_CRM_Extraccion'",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        992,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "C0CAB6DQ67M",
+          "cachedResultName": "operaciones"
+        },
+        "text": "=Alerta Operativa n8n:\nRemitente: {{ $('Set - Clean Payload ④').item.json.From }}\nAsunto: {{ $('Set - Clean Payload ④').item.json.Subject }}",
+        "otherOptions": {}
+      },
+      "id": "4eac4686-7e39-49d1-aed4-589fcd34b98e",
+      "name": "Slack - Send Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        1184,
+        0
+      ],
+      "webhookId": "3b9157cc-037d-4854-97e0-b534b06329d1",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "oEwUiCzTthqFRjxD",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2bb14bd9-42fb-43fa-87eb-fce49f3fdf0d",
+              "leftValue": "={{ ($('Gmail Trigger (Soporte)').item.json.text || '').length }}",
+              "rightValue": 5,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8e160b99-a758-46d1-bf7a-7e2f88bdebe9",
+      "name": "If1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1392,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analiza la siguiente conversación de soporte y genera un resumen estructurado.\n\nResumen previo del caso: {{ $('Create a record').isExecuted ? 'Sin historial previo' : ($('If').item.json.fields?.['Resumen consolidado'] || 'Sin historial previo') }}\n\nEmail del cliente ({{ $('Set - Clean Payload ④').item.json.From }}):\nAsunto: {{ $('Set - Clean Payload ④').item.json.Subject }}\n{{ $('Gmail Trigger (Soporte)').item.json.text || '' }}\n\nRespuesta del agente:\n{{ $('AI Agent').item.json.output }}\n\nDevuelve un JSON estricto con la siguiente estructura:\n{\n  \"asunto_principal\": \"string\",\n  \"puntos_clave\": [\"string\"],\n  \"accion_requerida\": \"string\"\n}",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "id": "731b5584-a725-4263-b28c-7b8f640ba8cc",
+      "name": "Basic LLM Chain",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1584,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "47d8e690-33a0-41ac-825f-1b6950af63be",
+      "name": "OpenAI Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1584,
+        208
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"asunto_principal\": \"string\",\n  \"puntos_clave\": [\"string\"],\n  \"accion_requerida\": \"string\"\n}"
+      },
+      "id": "7dd0dce9-d26d-4f58-8ae2-693c352bc6e0",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1744,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appDvoHgRD0znGrZN",
+          "mode": "list",
+          "cachedResultName": "Memoria persistente y resumen automático del agente",
+          "cachedResultUrl": "https://airtable.com/appDvoHgRD0znGrZN"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbloMOCKWuWTY4nQG",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/appDvoHgRD0znGrZN/tbloMOCKWuWTY4nQG"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Resumen consolidado": "={{ \"Asunto: \" + $json.output.asunto_principal + \" | Puntos clave: \" + ($json.output.puntos_clave || []).join(\", \") + \" | Acción requerida: \" + $json.output.accion_requerida }}",
+            "Datos clave": "={{ ($json.output?.puntos_clave || []).join(\"; \") }}",
+            "Fecha de actualización": "={{ $now.toISO() }}",
+            "Estado del caso": "Activo",
+            "id": "={{ $('Create a record').isExecuted ? $('Create a record').item.json.id : $('If').item.json.id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true
+            },
+            {
+              "id": "Session_ID",
+              "displayName": "Session_ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Fecha de actualización",
+              "displayName": "Fecha de actualización",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Resumen consolidado",
+              "displayName": "Resumen consolidado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Estado del caso",
+              "displayName": "Estado del caso",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Datos clave",
+              "displayName": "Datos clave",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "430b8f04-057b-4cee-b193-dcb237362058",
+      "name": "Update record",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        1920,
+        0
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "3ffsdOakyDxZgYIr",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "2mIpuoI1Dz77uUBo",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/2mIpuoI1Dz77uUBo",
+          "cachedResultName": "Worker_Email_Redaccion"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $json.From }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "bfd2583f-a400-41d1-9988-d16df79f2cb0",
+      "name": "Call 'Worker_Email_Redaccion'1",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        992,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appDvoHgRD0znGrZN",
+          "mode": "list",
+          "cachedResultName": "Memoria persistente y resumen automático del agente",
+          "cachedResultUrl": "https://airtable.com/appDvoHgRD0znGrZN"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbloMOCKWuWTY4nQG",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/appDvoHgRD0znGrZN/tbloMOCKWuWTY4nQG"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Session_ID": "={{ $('Gmail Trigger (Soporte)').item.json.from.value[0].address }}",
+            "Estado del caso": "Nuevo",
+            "Resumen consolidado": "Sin historial previo",
+            "Fecha de actualización": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Session_ID",
+              "displayName": "Session_ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Fecha de actualización",
+              "displayName": "Fecha de actualización",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Resumen consolidado",
+              "displayName": "Resumen consolidado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Estado del caso",
+              "displayName": "Estado del caso",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Datos clave",
+              "displayName": "Datos clave",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "2db63144-e64f-4b83-84c6-e6da048c3c49",
+      "name": "Create a record",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        128,
+        144
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "3ffsdOakyDxZgYIr",
+          "name": "Airtable account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger (Soporte)": {
+      "main": [
+        [
+          {
+            "node": "IF - Anti Auto-Reply ①",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Anti Auto-Reply ①": {
+      "main": [
+        [
+          {
+            "node": "Search records (Look up) ②",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records (Look up) ②": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Set - Clean Payload ④",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail - Create Draft (HITL) ③": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set - Clean Payload ④": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Call 'Worker_CRM_Extraccion'",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call 'Worker_Email_Redaccion'1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Worker_CRM_Extraccion'": {
+      "main": [
+        [
+          {
+            "node": "Slack - Send Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack - Send Alert": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Update record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Worker_Email_Redaccion'1": {
+      "main": [
+        [
+          {
+            "node": "Slack - Send Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a record": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "a9b2209c-3552-4ef9-8a7e-bca0d0edd5e3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4120d1f8e8b6d19ca8d6f07a632d9aff4e2f07d67b33e8471cf02cd3eba16545"
+  },
+  "nodeGroups": [],
+  "id": "cfbwmccV4On1YfNO",
+  "tags": []
+}
