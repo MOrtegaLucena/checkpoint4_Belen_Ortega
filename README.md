@@ -34,3 +34,10 @@ El diseño del flujo incorpora las cuatro barreras de seguridad exigidas por la 
 A continuación se adjunta la captura de la sección **Credentials** de n8n verificando las conexiones activas para Gmail, Slack y Airtable:
 
 <img width="621" height="360" alt="image" src="https://github.com/user-attachments/assets/bf3f03dc-c06a-4be5-a1e3-8b6f7cace2f9" />
+
+---
+
+## 🔐 Evidencia de funcionamiento del flujo:
+
+
+<img width="628" height="362" alt="image" src="https://github.com/user-attachments/assets/90b9c8be-6147-4a28-819b-0f8ef2c51aad" />
